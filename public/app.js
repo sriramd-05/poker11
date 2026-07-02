@@ -70,19 +70,75 @@ let reconnectTimer = null;
 const MAX_RECONNECT = 8;
 const RECONNECT_DELAYS = [1000, 2000, 3000, 5000, 8000, 15000, 30000, 30000];
 
-// Evenly spaced ellipse — seat 1 at bottom, clockwise
+// Positions tuned for tall rounded-rectangle table — seat 1 at bottom-centre, clockwise
 const seatPositions = [
-  ["50%", "91%"],  // 1
-  ["23%", "83%"],  // 2
-  ["6%",  "63%"],  // 3
-  ["6%",  "37%"],  // 4
-  ["23%", "17%"],  // 5
-  ["50%",  "7%"],  // 6
-  ["77%", "17%"],  // 7
-  ["94%", "37%"],  // 8
-  ["94%", "63%"],  // 9
-  ["77%", "83%"],  // 10
+  ["50%", "88%"],  // 1 bottom centre
+  ["26%", "80%"],  // 2 bottom left
+  ["9%",  "62%"],  // 3 left lower
+  ["9%",  "38%"],  // 4 left upper
+  ["26%", "20%"],  // 5 top left
+  ["50%", "12%"],  // 6 top centre
+  ["74%", "20%"],  // 7 top right
+  ["91%", "38%"],  // 8 right upper
+  ["91%", "62%"],  // 9 right lower
+  ["74%", "80%"],  // 10 bottom right
 ];
+
+// ── Hand rank evaluation ──────────────────────────────────────────────────────
+// Returns { label, tier } where tier is a CSS class suffix (pair, two, trips, str8, flush, boat, quads, sf, high)
+const RANK_ORDER = "23456789TJQKA";
+function rankVal(r) { return RANK_ORDER.indexOf(r); }
+
+function evalHandRank(holeCards, boardCards) {
+  // Only show rank when we have ≥1 visible hole card and ≥3 board cards
+  const visible = (holeCards || []).filter(Boolean);
+  const board   = (boardCards || []).filter(Boolean);
+  if (visible.length === 0 || board.length < 3) return null;
+
+  const all = [...visible, ...board];
+  if (all.length < 2) return null;
+
+  const suits = {};
+  const rankCounts = {};
+  for (const c of all) {
+    suits[c.suit]  = (suits[c.suit]  || 0) + 1;
+    rankCounts[c.rank] = (rankCounts[c.rank] || 0) + 1;
+  }
+
+  const counts = Object.values(rankCounts).sort((a, b) => b - a);
+  const hasFlush = Object.values(suits).some(v => v >= 5);
+
+  // straight check
+  const rankSet = new Set(all.map(c => rankVal(c.rank)));
+  let hasStraight = false;
+  const rankArr = [...rankSet].sort((a,b)=>a-b);
+  // Ace-low
+  if (rankSet.has(12)) rankArr.unshift(-1);
+  for (let i = 0; i <= rankArr.length - 5; i++) {
+    if (rankArr[i+4] - rankArr[i] === 4 && new Set(rankArr.slice(i, i+5)).size === 5) {
+      hasStraight = true; break;
+    }
+  }
+
+  if (hasStraight && hasFlush) return { label: "Str. Flush", tier: "sf" };
+  if (counts[0] === 4) {
+    const quad = Object.entries(rankCounts).find(([,v])=>v===4)?.[0] || "";
+    return { label: `Quads (${rnk(quad)})`, tier: "quads" };
+  }
+  if (counts[0] === 3 && counts[1] >= 2) return { label: "Full House", tier: "boat" };
+  if (hasFlush) return { label: "Flush", tier: "flush" };
+  if (hasStraight) return { label: "Straight", tier: "str8" };
+  if (counts[0] === 3) {
+    const trips = Object.entries(rankCounts).find(([,v])=>v===3)?.[0] || "";
+    return { label: `Trips (${rnk(trips)})`, tier: "trips" };
+  }
+  const pairs = Object.entries(rankCounts).filter(([,v])=>v>=2).sort((a,b)=>rankVal(b[0])-rankVal(a[0]));
+  if (pairs.length >= 2) return { label: `Two Pair`, tier: "two" };
+  if (pairs.length === 1) {
+    return { label: `Pair (${rnk(pairs[0][0])})`, tier: "pair" };
+  }
+  return { label: "High Card", tier: "high" };
+}
 
 // Pre-fill name and room code from URL/?room=
 nameInput.value = localStorage.getItem("pokerName") || "";
@@ -318,6 +374,9 @@ function renderSeats() {
     const color = AVATAR_COLORS[(sn - 1) % AVATAR_COLORS.length];
     const micClass = player.muted ? "muted" : (voiceStatus.get(player.id) === "ready" ? "on" : "");
 
+    const hr = evalHandRank(player.cards, state.board);
+    const hrBadge = hr ? `<span class="hand-rank-badge rank-${hr.tier}">${escHtml(hr.label)}</span>` : "";
+
     seat.innerHTML = `
       <div class="seat-pod">
         <div class="avatar-wrap">
@@ -328,6 +387,7 @@ function renderSeats() {
         </div>
         <div class="seat-cards"></div>
         <div class="seat-name-text">${escHtml(player.name)}</div>
+        ${hrBadge}
         <div class="seat-badges">${player.isOwner ? '<span class="badge owner">Owner</span>' : ""}${badge}</div>
         <div class="stack-chip">${player.stack}</div>
         ${betMarker}
