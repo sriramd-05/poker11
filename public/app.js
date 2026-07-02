@@ -470,11 +470,10 @@ function renderControls() {
   document.querySelector('[data-action="call"]').disabled  = off || callAmount === 0;
   document.querySelector('[data-action="call"]').textContent = callAmount ? `Call ${callAmount}` : "Call";
 
-  // Update quick-bet labels with real pot amounts
-  const pot = state.pot + state.players.reduce((s, p) => s + p.bet, 0);
-  document.querySelector('[data-bet="0.5"]').textContent = `½ Pot (${Math.round(pot * 0.5)})`;
-  document.querySelector('[data-bet="1"]').textContent   = `Pot (${pot})`;
-  document.querySelector('[data-bet="2"]').textContent   = `2× (${pot * 2})`;
+  // Quick-bet labels — keep short so raise-row never wraps on mobile
+  document.querySelector('[data-bet="0.5"]').textContent = `½ Pot`;
+  document.querySelector('[data-bet="1"]').textContent   = `Pot`;
+  document.querySelector('[data-bet="2"]').textContent   = `2×`;
 
   clearInterval(timerInterval);
   timerLabel.textContent = "--";
