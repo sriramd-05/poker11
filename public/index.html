@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Friends Poker</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="app">
+      <section class="join" id="joinPanel">
+        <div>
+          <p class="eyebrow">Private Texas Hold'em</p>
+          <h1>Friends Poker</h1>
+          <p class="intro">Create a table, share the room code, and play with voice chat in the browser.</p>
+        </div>
+        <label>
+          Your name
+          <input id="nameInput" maxlength="24" autocomplete="name" placeholder="Alex">
+        </label>
+        <label>
+          Room code
+          <input id="roomInput" maxlength="8" placeholder="Leave blank to create">
+        </label>
+        <label>
+          Buy-in chips
+          <input id="buyInInput" type="number" min="100" max="100000" step="100" value="2000">
+        </label>
+        <label>
+          Seat number
+          <select id="seatInput">
+            <option value="">Auto seat</option>
+            <option value="1">Seat 1</option>
+            <option value="2">Seat 2</option>
+            <option value="3">Seat 3</option>
+            <option value="4">Seat 4</option>
+            <option value="5">Seat 5</option>
+            <option value="6">Seat 6</option>
+            <option value="7">Seat 7</option>
+            <option value="8">Seat 8</option>
+            <option value="9">Seat 9</option>
+            <option value="10">Seat 10</option>
+          </select>
+        </label>
+        <div class="join-actions">
+          <button id="createBtn">Create Room</button>
+          <button id="joinBtn" class="secondary">Join Room</button>
+        </div>
+        <p class="notice" id="notice"></p>
+      </section>
+
+      <section class="table-screen hidden" id="tableScreen">
+        <header class="topbar">
+          <div class="topbar-title">
+            <p class="eyebrow">Friends Poker</p>
+            <h2 id="phaseLabel">Waiting</h2>
+          </div>
+          <div class="top-actions">
+            <button id="startHandBtn">Start Hand</button>
+            <button id="menuBtn" class="secondary icon-btn" aria-label="Options">&#9776;</button>
+          </div>
+          <div class="options-menu hidden" id="optionsMenu">
+            <button id="copyCodeBtn" class="secondary">Copy Invite</button>
+            <button id="voiceBtn" class="secondary">Start Voice</button>
+            <button id="muteBtn" class="secondary" disabled>Mute</button>
+            <button id="soundBtn" class="secondary">Sound On</button>
+            <button id="awayBtn" class="secondary">Away</button>
+            <button id="leaveSeatBtn" class="secondary">Leave Seat</button>
+            <button id="pauseBtn" class="secondary hidden">Pause</button>
+            <button id="showCardsBtn" class="secondary hidden">Show Cards</button>
+          </div>
+        </header>
+
+        <section class="rejoin-bar hidden" id="rejoinBar">
+          <span>You're not seated.</span>
+          <select id="rejoinSeatInput">
+            <option value="">Auto seat</option>
+          </select>
+          <button id="rejoinSeatBtn">Take Seat</button>
+        </section>
+
+        <section class="next-hand-bar hidden" id="nextHandBar"></section>
+
+        <section class="table-wrap">
+          <div class="table-container">
+            <!-- Pause overlay (outside .table to avoid overflow:hidden clipping) -->
+            <div id="pauseOverlay" class="pause-overlay hidden">
+              <div class="pause-inner">
+                <span class="pause-icon">⏸</span>
+                <p>Game Paused</p>
+              </div>
+            </div>
+            <!-- Win announcement -->
+            <div id="winOverlay" class="win-overlay hidden">
+              <div class="win-inner">
+                <div class="win-trophy">🏆</div>
+                <div class="win-names"></div>
+                <div class="win-hand"></div>
+                <div class="win-amount"></div>
+              </div>
+            </div>
+            <div class="table" id="table">
+              <div class="table-brand"><span>Friends Poker</span></div>
+              <div class="board-zone">
+                <div class="pot-stack">
+                  <div class="pot total-pot" id="potLabel">Pot  0</div>
+                  <div class="round-pot hidden" id="roundPotLabel">Bet  0</div>
+                </div>
+                <div class="cards" id="boardCards"></div>
+              </div>
+              <div class="seats" id="seats"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="controls">
+          <div class="status">
+            <strong id="turnLabel">Waiting for players</strong>
+            <span id="timerLabel">--</span>
+          </div>
+          <div class="actions">
+            <button data-action="fold" class="secondary">Fold</button>
+            <button data-action="check" class="secondary">Check</button>
+            <button data-action="call">Call</button>
+            <button data-action="allIn" class="danger">All-in</button>
+          </div>
+          <div class="raise-row">
+            <div class="quick-bets">
+              <button data-bet="0.5" class="secondary quick-bet">½ Pot</button>
+              <button data-bet="1"   class="secondary quick-bet">Pot</button>
+              <button data-bet="2"   class="secondary quick-bet">2×</button>
+            </div>
+            <input id="raiseInput" type="number" min="20" step="10" value="40">
+            <button data-action="raise">Raise</button>
+          </div>
+        </section>
+
+        <aside class="side">
+          <div class="panel">
+            <h3>Chat</h3>
+            <div class="messages" id="messages"></div>
+            <form id="chatForm">
+              <input id="chatInput" maxlength="240" placeholder="Message friends">
+              <button>Send</button>
+            </form>
+          </div>
+          <div class="panel">
+            <h3>Hand Log</h3>
+            <ol id="handLog"></ol>
+          </div>
+          <div class="panel">
+            <h3>Chips</h3>
+            <form id="chipsForm">
+              <input id="chipsInput" type="number" min="100" max="100000" step="100" value="1000">
+              <button>Request</button>
+            </form>
+            <div class="chip-requests" id="chipRequests"></div>
+          </div>
+          <div class="panel">
+            <h3>Player Stats</h3>
+            <div class="stats" id="statsPanel"></div>
+          </div>
+          <div class="panel">
+            <h3>Ledger</h3>
+            <ol class="ledger" id="ledgerPanel"></ol>
+          </div>
+          <div class="panel voice-panel">
+            <h3>Voice</h3>
+            <div id="voicePeers"></div>
+            <div id="audioMount"></div>
+          </div>
+        </aside>
+      </section>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>
